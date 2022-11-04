@@ -19,6 +19,15 @@ public:
         mPos[1] = y;
         mPos[2] = z;
     }
+
+    float distanceSquared(const KdPoint &p) const
+    {
+        float dx = mPos[0] - p.mPos[0];
+        float dy = mPos[1] - p.mPos[1];
+        float dz = mPos[2] - p.mPos[2];
+        return dx*dx + dy*dy + dz*dz;
+    }
+
     uint32_t      mId{ 0 };
     float         mPos[3]{ 0,0,0 };
 };
@@ -76,6 +85,21 @@ public:
     {
         float ret = -1;
 
+// Debug code, do a brute force linear search. Should give the
+// same answer as the KdTree. 
+#if 0
+        float closest = FLT_MAX;
+        for (auto &n:mNodes)
+        {
+            float d2 = p.distanceSquared(n.mPoint);
+            if ( d2 < closest )
+            {
+                closest = d2;
+                ret = d2;
+                result = n.mPoint;
+            }
+        }
+#else
         KdNode find;
         find.mPoint = p;
         const KdNode *best=nullptr;
@@ -86,6 +110,7 @@ public:
             ret = nearestDistanceSquared;
             result = best->mPoint;
         }
+#endif
         return ret;
     }
 
