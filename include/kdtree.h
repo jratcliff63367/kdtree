@@ -19,17 +19,12 @@ class point
 public:
     point(coordinate_type x,coordinate_type y,coordinate_type z)
     {
-        coords_[0] = x;
-        coords_[1] = y;
-        coords_[2] = z;
+        mCoordinates[0] = x;
+        mCoordinates[1] = y;
+        mCoordinates[2] = z;
     }
-    point(std::array<coordinate_type, dimensions> c) : coords_(c) 
+    point(std::array<coordinate_type, dimensions> c) : mCoordinates(c) 
     {
-    }
-    point(std::initializer_list<coordinate_type> list) 
-    {
-        size_t n = std::min(dimensions, list.size());
-        std::copy_n(list.begin(), n, coords_.begin());
     }
 
     /**
@@ -40,7 +35,7 @@ public:
      */
     coordinate_type get(size_t index) const 
     {
-        return coords_[index];
+        return mCoordinates[index];
     }
 
     /**
@@ -70,92 +65,93 @@ public:
         return mId;
     }
 private:
-    std::array<coordinate_type, dimensions> coords_;
+    std::array<coordinate_type, dimensions> mCoordinates;
     uint32_t    mId;
 };
 
-/**
- * C++ k-d tree implementation, based on the C version at rosettacode.org.
- */
+// Templated implementation of KdTree
 template<typename coordinate_type, size_t dimensions>
-class RosettaKdTree 
+class KdTreeTemplate 
 {
 public:
     typedef point<coordinate_type, dimensions> point_type;
 private:
-    struct node 
+    struct KdNode 
     {
-        node(const point_type& pt) : point_(pt), left_(nullptr), right_(nullptr) 
+        KdNode(const point_type& pt) : mPoint(pt), mLeft(nullptr), mRight(nullptr) 
         {
         }
         coordinate_type get(size_t index) const 
         {
-            return point_.get(index);
+            return mPoint.get(index);
         }
+
         float distance(const point_type& pt) const 
         {
-            return point_.distance(pt);
+            return mPoint.distance(pt);
         }
-        point_type point_;
-        node* left_;
-        node* right_;
+
+        point_type mPoint;
+        KdNode* mLeft;
+        KdNode* mRight;
     };
-    node* root_ = nullptr;
-    node* best_ = nullptr;
-    float best_dist_ = 0;
-    size_t visited_ = 0;
-    std::vector<node> nodes_;
+    KdNode              *mRoot{nullptr};
+    KdNode              *mBest ={nullptr};
+    float               mBestDistance{0};
+    size_t              mVisitCount{0};
+    std::vector<KdNode> mNodes;
 
-    struct node_cmp 
+    class KdNodeCompare 
     {
-        node_cmp(size_t index) : index_(index) 
+    public:
+        KdNodeCompare(size_t index) : index_(index) 
         {
         }
 
-        bool operator()(const node& n1, const node& n2) const 
+        bool operator()(const KdNode& n1, const KdNode& n2) const 
         {
-            return n1.point_.get(index_) < n2.point_.get(index_);
+            return n1.mPoint.get(index_) < n2.mPoint.get(index_);
         }
 
         size_t index_;
     };
 
-    node* make_tree(size_t begin, size_t end, size_t index) 
+    KdNode* buildKdTree(size_t begin, size_t end, size_t index) 
     {
         if (end <= begin)
             return nullptr;
         size_t n = begin + (end - begin)/2;
-        auto i = nodes_.begin();
-        std::nth_element(i + begin, i + n, i + end, node_cmp(index));
+        auto i = mNodes.begin();
+        std::nth_element(i + begin, i + n, i + end, KdNodeCompare(index));
         index = (index + 1) % dimensions;
-        nodes_[n].left_ = make_tree(begin, n, index);
-        nodes_[n].right_ = make_tree(n + 1, end, index);
-        return &nodes_[n];
+        mNodes[n].mLeft  = buildKdTree(begin, n, index);
+        mNodes[n].mRight = buildKdTree(n + 1, end, index);
+        return &mNodes[n];
     }
 
-    void nearest(node* root, const point_type& point, size_t index) 
+    void nearest(KdNode* root, const point_type& point, size_t index) 
     {
         if (root == nullptr)
             return;
-        ++visited_;
+        ++mVisitCount;
         float d = root->distance(point);
-        if (best_ == nullptr || d < best_dist_) 
+        if (mBest == nullptr || d < mBestDistance) 
         {
-            best_dist_ = d;
-            best_ = root;
+            mBestDistance = d;
+            mBest = root;
         }
-        if (best_dist_ == 0)
+        if (mBestDistance == 0)
             return;
         float dx = root->get(index) - point.get(index);
         index = (index + 1) % dimensions;
-        nearest(dx > 0 ? root->left_ : root->right_, point, index);
-        if (dx * dx >= best_dist_)
+        nearest(dx > 0 ? root->mLeft : root->mRight, point, index);
+        if (dx * dx >= mBestDistance)
             return;
-        nearest(dx > 0 ? root->right_ : root->left_, point, index);
+        nearest(dx > 0 ? root->mRight : root->mLeft, point, index);
     }
 public:
-    RosettaKdTree(const RosettaKdTree&) = delete;
-    RosettaKdTree& operator=(const RosettaKdTree&) = delete;
+    KdTreeTemplate(const KdTreeTemplate&) = delete;
+    KdTreeTemplate& operator=(const KdTreeTemplate&) = delete;
     /**
      * Constructor taking a pair of iterators. Adds each
      * point in the range [begin, end) to the tree.
@@ -164,9 +160,9 @@ public:
      * @param end end of range
      */
     template<typename iterator>
-    RosettaKdTree(iterator begin, iterator end) : nodes_(begin, end) 
+    KdTreeTemplate(iterator begin, iterator end) : mNodes(begin, end) 
     {
-        root_ = make_tree(0, nodes_.size(), 0);
+        mRoot = buildKdTree(0, mNodes.size(), 0);
     }
     
 
@@ -175,7 +171,7 @@ public:
      */
     bool empty() const 
     { 
-        return nodes_.empty(); 
+        return mNodes.empty(); 
     }
 
     /**
@@ -183,7 +179,7 @@ public:
      * to nearest().
      */
     size_t visited() const 
-    { return visited_; 
+    { return mVisitCount; 
     }
 
     /**
@@ -192,7 +188,7 @@ public:
      */
     float distance() const 
     { 
-        return std::sqrt(best_dist_); 
+        return std::sqrt(mBestDistance); 
     }
 
     /**
@@ -204,18 +200,19 @@ public:
      */
     const point_type& nearest(const point_type& pt) 
     {
-        if (root_ == nullptr)
+        if (mRoot == nullptr)
             throw std::logic_error("tree is empty");
-        best_ = nullptr;
-        visited_ = 0;
-        best_dist_ = 0;
-        nearest(root_, pt, 0);
-        return best_->point_;
+        mBest = nullptr;
+        mVisitCount = 0;
+        mBestDistance = 0;
+        nearest(mRoot, pt, 0);
+        return mBest->mPoint;
     }
 };
 
 typedef point<float, 3> point3d;
-typedef RosettaKdTree<float, 3> tree3d;
+typedef KdTreeTemplate<float, 3> tree3d;
+
 //****
 
 class KdPoint
