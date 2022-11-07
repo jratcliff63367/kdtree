@@ -17,7 +17,8 @@
  * Class for representing a point. coordinate_type must be a numeric type.
  */
 template<typename coordinate_type, size_t dimensions>
-class point {
+class point 
+{
 public:
     point(coordinate_type x,coordinate_type y,coordinate_type z)
     {
@@ -25,20 +26,26 @@ public:
         coords_[1] = y;
         coords_[2] = z;
     }
-    point(std::array<coordinate_type, dimensions> c) : coords_(c) {}
-    point(std::initializer_list<coordinate_type> list) {
+    point(std::array<coordinate_type, dimensions> c) : coords_(c) 
+    {
+    }
+    point(std::initializer_list<coordinate_type> list) 
+    {
         size_t n = std::min(dimensions, list.size());
         std::copy_n(list.begin(), n, coords_.begin());
     }
+
     /**
      * Returns the coordinate in the given dimension.
      *
      * @param index dimension index (zero based)
      * @return coordinate in the given dimension
      */
-    coordinate_type get(size_t index) const {
+    coordinate_type get(size_t index) const 
+    {
         return coords_[index];
     }
+
     /**
      * Returns the distance squared from this point to another
      * point.
@@ -46,9 +53,11 @@ public:
      * @param pt another point
      * @return distance squared from this point to the other point
      */
-    double distance(const point& pt) const {
+    double distance(const point& pt) const 
+    {
         double dist = 0;
-        for (size_t i = 0; i < dimensions; ++i) {
+        for (size_t i = 0; i < dimensions; ++i) 
+        {
             double d = get(i) - pt.get(i);
             dist += d * d;
         }
@@ -58,32 +67,26 @@ private:
     std::array<coordinate_type, dimensions> coords_;
 };
 
-template<typename coordinate_type, size_t dimensions>
-std::ostream& operator<<(std::ostream& out, const point<coordinate_type, dimensions>& pt) {
-    out << '(';
-    for (size_t i = 0; i < dimensions; ++i) {
-        if (i > 0)
-            out << ", ";
-        out << pt.get(i);
-    }
-    out << ')';
-    return out;
-}
-
 /**
  * C++ k-d tree implementation, based on the C version at rosettacode.org.
  */
 template<typename coordinate_type, size_t dimensions>
-class RosettaKdTree {
+class RosettaKdTree 
+{
 public:
     typedef point<coordinate_type, dimensions> point_type;
 private:
-    struct node {
-        node(const point_type& pt) : point_(pt), left_(nullptr), right_(nullptr) {}
-        coordinate_type get(size_t index) const {
+    struct node 
+    {
+        node(const point_type& pt) : point_(pt), left_(nullptr), right_(nullptr) 
+        {
+        }
+        coordinate_type get(size_t index) const 
+        {
             return point_.get(index);
         }
-        double distance(const point_type& pt) const {
+        double distance(const point_type& pt) const 
+        {
             return point_.distance(pt);
         }
         point_type point_;
@@ -96,15 +99,22 @@ private:
     size_t visited_ = 0;
     std::vector<node> nodes_;
 
-    struct node_cmp {
-        node_cmp(size_t index) : index_(index) {}
-        bool operator()(const node& n1, const node& n2) const {
+    struct node_cmp 
+    {
+        node_cmp(size_t index) : index_(index) 
+        {
+        }
+
+        bool operator()(const node& n1, const node& n2) const 
+        {
             return n1.point_.get(index_) < n2.point_.get(index_);
         }
+
         size_t index_;
     };
 
-    node* make_tree(size_t begin, size_t end, size_t index) {
+    node* make_tree(size_t begin, size_t end, size_t index) 
+    {
         if (end <= begin)
             return nullptr;
         size_t n = begin + (end - begin)/2;
@@ -116,12 +126,14 @@ private:
         return &nodes_[n];
     }
 
-    void nearest(node* root, const point_type& point, size_t index) {
+    void nearest(node* root, const point_type& point, size_t index) 
+    {
         if (root == nullptr)
             return;
         ++visited_;
         double d = root->distance(point);
-        if (best_ == nullptr || d < best_dist_) {
+        if (best_ == nullptr || d < best_dist_) 
+        {
             best_dist_ = d;
             best_ = root;
         }
@@ -145,42 +157,36 @@ public:
      * @param end end of range
      */
     template<typename iterator>
-    RosettaKdTree(iterator begin, iterator end) : nodes_(begin, end) {
+    RosettaKdTree(iterator begin, iterator end) : nodes_(begin, end) 
+    {
         root_ = make_tree(0, nodes_.size(), 0);
     }
     
-    /**
-     * Constructor taking a function object that generates
-     * points. The function object will be called n times
-     * to populate the tree.
-     *
-     * @param f function that returns a point
-     * @param n number of points to add
-     */
-    template<typename func>
-    RosettaKdTree(func&& f, size_t n) {
-        nodes_.reserve(n);
-        for (size_t i = 0; i < n; ++i)
-            nodes_.push_back(f());
-        root_ = make_tree(0, nodes_.size(), 0);
-    }
 
     /**
      * Returns true if the tree is empty, false otherwise.
      */
-    bool empty() const { return nodes_.empty(); }
+    bool empty() const 
+    { 
+        return nodes_.empty(); 
+    }
 
     /**
      * Returns the number of nodes visited by the last call
      * to nearest().
      */
-    size_t visited() const { return visited_; }
+    size_t visited() const 
+    { return visited_; 
+    }
 
     /**
      * Returns the distance between the input point and return value
      * from the last call to nearest().
      */
-    double distance() const { return std::sqrt(best_dist_); }
+    double distance() const 
+    { 
+        return std::sqrt(best_dist_); 
+    }
 
     /**
      * Finds the nearest point in the tree to the given point.
@@ -189,7 +195,8 @@ public:
      * @param pt a point
      * @return the nearest point in the tree to the given point
      */
-    const point_type& nearest(const point_type& pt) {
+    const point_type& nearest(const point_type& pt) 
+    {
         if (root_ == nullptr)
             throw std::logic_error("tree is empty");
         best_ = nullptr;
@@ -199,6 +206,10 @@ public:
         return best_->point_;
     }
 };
+
+typedef point<double, 3> point3d;
+typedef RosettaKdTree<double, 3> tree3d;
+
 //
 
 class Point3
@@ -214,8 +225,6 @@ public:
     float x,y,z;
 };
 
-typedef point<double, 3> point3d;
-typedef RosettaKdTree<double, 3> tree3d;
 
 int main(int argc,const char **argv)
 {
@@ -236,9 +245,9 @@ int main(int argc,const char **argv)
         points.push_back(p);
         kdtree::KdPoint kp;
         kp.mId = i;
-        kp.mPos[0] = p.x;
-        kp.mPos[1] = p.y;
-        kp.mPos[2] = p.z;
+        kp.x = p.x;
+        kp.y = p.y;
+        kp.z = p.z;
         kdt.addPoint(kp);
     }
     kdt.buildTree();
@@ -273,9 +282,9 @@ int main(int argc,const char **argv)
     }
 
     kdtree::KdPoint kp,result;
-    kp.mPos[0] = fp.x;
-    kp.mPos[1] = fp.y;
-    kp.mPos[2] = fp.z;
+    kp.x = fp.x;
+    kp.y = fp.y;
+    kp.z = fp.z;
     kdt.findNearest(kp,result);
     assert( result.mId == index );
 
